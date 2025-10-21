@@ -1,0 +1,51 @@
+- hosts: all
+  become: yes
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - python3
+          - python3-pip
+          - docker.io
+          - docker-compose
+        state: present
+
+    - name: Clone the VaultUpload repository
+      git:
+        repo: 'https://github.com/yourusername/VaultUpload.git'
+        dest: /opt/VaultUpload
+        version: main
+
+    - name: Install Python dependencies
+      pip:
+        requirements: /opt/VaultUpload/backend/requirements.txt
+
+    - name: Start Docker containers
+      command: docker compose -f devops/docker-compose.yml up -d --build
+      args:
+        chdir: /opt/VaultUpload
+
+    - name: Ensure services are running
+      command: docker ps
+      register: docker_ps
+
+    - debug:
+        var: docker_ps.stdout_lines
+
+    - name: Clean up old containers
+      command: docker system prune -f
+
+    - name: Check health of backend service
+      uri:
+        url: http://localhost/api/health/health
+        method: GET
+        return_content: yes
+      register: health_check
+
+    - debug:
+        var: health_check.content
+
+    - name: Notify if backend service is not healthy
+      fail:
+        msg: "Backend service is not healthy!"
+      when: health_check.status != 200

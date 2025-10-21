@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultupload-frontend
+  labels:
+    app: vaultupload
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: vaultupload
+      tier: frontend
+  template:
+    metadata:
+      labels:
+        app: vaultupload
+        tier: frontend
+    spec:
+      containers:
+        - name: frontend
+          image: your-docker-repo/vaultupload-frontend:latest
+          ports:
+            - containerPort: 3000
+          env:
+            - name: REACT_APP_API_URL
+              value: "http://backend-service:5000"  # Adjust according to your backend service name
+          resources:
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+            requests:
+              memory: "256Mi"
+              cpu: "250m"

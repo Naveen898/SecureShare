@@ -1,0 +1,106 @@
+%% Enhanced Mermaid architecture diagram with styling for high-quality export
+%% Render with mermaid-cli (mmdc) to produce SVG/PNG/PDF
+%% Example: mmdc -i architecture_diagram_enhanced.mmd -o architecture.svg
+%% {init} block customizes theme & font for clarity
+%% Use SVG for lossless quality in presentations
+
+%%{init: {
+"theme": "neutral",
+"themeVariables": {
+  "fontFamily": "Inter,Segoe UI,Roboto,Helvetica,Arial,sans-serif",
+  "primaryColor": "#1e3a8a",
+  "primaryTextColor": "#ffffff",
+  "primaryBorderColor": "#0f2a5c",
+  "secondaryColor": "#065f46",
+  "tertiaryColor": "#6b21a8"
+},
+"flowchart": {"htmlLabels": true, "curve": "basis"}
+}}%%
+
+flowchart TB
+    %% LAYERS
+    subgraph L0[Client]
+        UI["<b>React SPA</b><br/>Vite Build"]
+    end
+
+    subgraph L1[Edge / Delivery]
+    LB["<b>AWS Application Load Balancer</b><br/>HTTPS + TLS"]
+        Ingress["<b>K8s Ingress Controller</b>"]
+    end
+
+    subgraph L2[Git & Automation]
+        Repo["<b>GitHub</b><br/>Source + PRs"]
+        CI["<b>CI Pipeline</b><br/>Jenkins / GitHub Actions"]
+        Argo["<b>ArgoCD</b><br/>GitOps Sync"]
+    end
+
+    subgraph L3[EKS Cluster]
+        subgraph AppNS[App Namespace]
+            FE["<b>Frontend Pod</b><br/>Nginx + static build"]
+            BE["<b>Backend Pod</b><br/>FastAPI + Gunicorn/Uvicorn"]
+            sidecar((ClamAV Sidecar))
+        end
+        subgraph OpsNS[Ops Namespace]
+            Prom["Prometheus<br/><i>Metrics</i>"]
+            Graf["Grafana<br/><i>Dashboards</i>"]
+            Loki["Logging Collector<br/>/ CloudWatch Logs"]
+        end
+    end
+
+    subgraph L4[Data & Secrets]
+    S3[("<b>S3 Bucket</b><br/>File Objects")] 
+    DB[("<b>SQLite (Dev)</b><br/>→ RDS (Prod)")] 
+        Secrets["<b>Secret Manager</b><br/>JWT Keys, hCaptcha"]
+    end
+
+    subgraph L5[IaC & Config]
+        TF["<b>Terraform</b><br/>Infra Provision"]
+        Ansible["<b>Ansible</b><br/>Config Mgmt"]
+    end
+
+    subgraph External[External Services]
+        hCaptcha["hCaptcha API"]
+    end
+
+    %% FLOWS
+    UI -->|HTTPS Requests| LB --> Ingress --> FE
+    UI -->|Receive Link| LB
+    FE -->|REST JSON| BE
+    BE -->|Scan Files| sidecar
+    BE -->|Store/Retrieve| S3
+    BE -->|Metadata ORM| DB
+    BE -->|Captcha Verify| hCaptcha
+    Secrets --> BE
+    Secrets --> FE
+
+    %% DEVOPS FLOW
+    Repo --> CI -->|Build + Test + Image Push| Argo -->|Sync Manifests| EKSCluster[(EKS Control Plane)] --> L3
+    TF -->|Provision EKS, ALB, IAM| EKSCluster
+    Ansible -->|Bootstrap / One-off Config| BE
+
+    %% OBSERVABILITY
+    L3 -->|Metrics| Prom --> Graf
+    L3 -->|Logs| Loki --> Graf
+
+    %% LINK NOTES
+    classDef client fill:#1e3a8a,stroke:#0f2a5c,color:#fff
+    classDef edge fill:#312e81,stroke:#1e1b4b,color:#fff
+    classDef app fill:#065f46,stroke:#033d2d,color:#fff
+    classDef ops fill:#6b21a8,stroke:#4c1d95,color:#fff
+    classDef data fill:#92400e,stroke:#451a03,color:#fff
+    classDef infra fill:#374151,stroke:#111827,color:#fff
+    classDef ext fill:#155e75,stroke:#0e3d4c,color:#fff
+
+    class UI client
+    class LB,Ingress edge
+    class FE,BE,sidecar app
+    class Prom,Graf,Loki ops
+    class S3,DB,Secrets data
+    class TF,Ansible,Repo,CI,Argo infra
+    class hCaptcha ext
+
+    %% LEGEND
+    subgraph Legend[Legend]
+        direction LR
+        A1[Client]:::client --> A2[Edge]:::edge --> A3[App Tier]:::app --> A4[Data]:::data
+    end

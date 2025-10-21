@@ -1,0 +1,43 @@
+pipeline {
+  agent any
+  environment {
+    AWS_REGION = credentials('AWS_REGION')
+    ECR_ACCOUNT = credentials('AWS_ACCOUNT_ID')
+    ECR_REPO_BACKEND = 'secureshare-backend'
+    ECR_REPO_FRONTEND = 'secureshare-frontend'
+  }
+  stages {
+    stage('Checkout') {
+      steps { checkout scm }
+    }
+    stage('Backend Tests') {
+      steps {
+        dir('backend') {
+          sh 'python -m venv .venv && . .venv/bin/activate && pip install -r requirements.txt && pytest || true'
+        }
+      }
+    }
+    stage('Build Docker Images') {
+      steps {
+        sh 'docker build -t ${ECR_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_BACKEND}:$BUILD_NUMBER -f backend/Dockerfile .'
+        sh 'docker build -t ${ECR_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_FRONTEND}:$BUILD_NUMBER -f frontend/Dockerfile .'
+      }
+    }
+    stage('Login to ECR') {
+      steps {
+        sh 'aws ecr get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin ${ECR_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com'
+      }
+    }
+    stage('Push Images') {
+      steps {
+        sh 'docker push ${ECR_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_BACKEND}:$BUILD_NUMBER'
+        sh 'docker push ${ECR_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_FRONTEND}:$BUILD_NUMBER'
+      }
+    }
+    stage('Deploy to EC2') {
+      steps {
+        sh 'ssh -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} "docker pull ${ECR_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_BACKEND}:$BUILD_NUMBER && docker pull ${ECR_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_FRONTEND}:$BUILD_NUMBER && docker rm -f backend frontend || true && docker run -d --name backend -e DATABASE_URL=\"${DATABASE_URL}\" -e AWS_REGION=\"${AWS_REGION}\" -e AWS_S3_BUCKET=\"${AWS_S3_BUCKET}\" -p 8000:8000 ${ECR_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_BACKEND}:$BUILD_NUMBER && docker run -d --name frontend -p 80:80 ${ECR_ACCOUNT}.dkr.ecr.${AWS_REGION}.amazonaws.com/${ECR_REPO_FRONTEND}:$BUILD_NUMBER"'
+      }
+    }
+  }
+}

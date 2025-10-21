@@ -1,0 +1,74 @@
+%% Mermaid architecture diagram for VaultUpload (full project vision)
+%% You can render this in many Markdown tools or mermaid.live
+
+flowchart LR
+    subgraph Client[User Browser]
+        UI[React / Vite SPA]
+    end
+
+    subgraph Edge[Edge / Networking]
+        LB[HTTPS Load Balancer]
+        Ingress[Ingress Controller]
+    end
+
+    subgraph CD[Git / CI / GitOps]
+        Repo[GitHub Repo]
+        CI[CI Pipeline (Jenkins/GitHub Actions)]
+        Argo[ArgoCD]
+    end
+
+    subgraph K8s[EKS Kubernetes Cluster]
+        subgraph NamespaceApp[Application Namespace]
+            FE[Frontend Deployment\n(Nginx serving built React)]
+            BE[Backend Deployment\nFastAPI + Gunicorn/Uvicorn]
+            Scan[ClamAV Sidecar / Service]
+        end
+        subgraph NamespaceOps[Ops Namespace]
+            Prom[Prometheus]
+            Graf[Grafana]
+            Loki[Logging Stack / CloudWatch]
+        end
+    end
+
+    subgraph Storage[Data & Secrets]
+    S3[(Amazon S3 Bucket)]
+    DB[(SQL DB: SQLite -> RDS/MySQL Planned)]
+    Secrets[AWS Secrets Manager]
+    end
+
+    subgraph IaC[Infrastructure as Code]
+        TF[Terraform Config]
+        Ansible[Ansible Playbooks]
+    end
+
+    UI -->|HTTPS| LB --> Ingress --> FE
+    UI -->|Receive Link / Download| LB
+    FE -->|REST / JSON| BE
+    BE -->|Store / Fetch Files| S3
+    BE -->|ORM Queries| DB
+    BE -->|Scan via| Scan
+    BE -->|Verify Captcha| hCaptchaAPI[hCaptcha API]
+    BE -->|JWT Auth| Repo
+
+    Repo --> CI --> Argo --> K8s
+    TF --> EKSProv[(Provision EKS, LB, Networks)] --> K8s
+    Ansible --> BE
+
+    Argo -->|Sync Manifests| K8s
+
+    Prom --> Graf
+    K8s --> Prom
+    K8s --> Loki --> Graf
+
+    Secrets --> BE
+    Secrets --> FE
+
+    classDef comp fill:#1e3a8a,stroke:#0d1b2a,color:#fff
+    classDef storage fill:#065f46,stroke:#033d2d,color:#fff
+    classDef ext fill:#6b21a8,stroke:#3b0764,color:#fff
+    classDef ci fill:#92400e,stroke:#451a03,color:#fff
+
+    class UI,FE,BE,Scan comp
+    class S3,DB,Secrets storage
+    class Repo,CI,Argo ci
+    class hCaptchaAPI ext

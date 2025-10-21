@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vaultupload-backend
+  labels:
+    app: vaultupload
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: vaultupload
+  template:
+    metadata:
+      labels:
+        app: vaultupload
+    spec:
+      containers:
+      - name: backend
+        image: your-docker-repo/vaultupload-backend:latest
+        ports:
+        - containerPort: 8000
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: STORAGE_BACKEND
+          value: "s3"
+        - name: AWS_REGION
+          value: "ap-south-1"
+        - name: AWS_S3_BUCKET
+          value: "secureshare-main-vault"
+        - name: AWS_ACCESS_KEY_ID
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: accessKeyId
+        - name: AWS_SECRET_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              name: aws-credentials
+              key: secretAccessKey
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: secret
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "500m"
+          limits:
+            memory: "512Mi"
+            cpu: "1"
+      imagePullSecrets:
+      - name: regcred

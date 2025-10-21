@@ -1,0 +1,89 @@
+
+About Us
+
+MUFG Bank, Ltd. is Japan's premier bank, with a global network spanning in more than 40 markets. Outside of Japan, the bank offers an extensive scope of commercial and investment banking products and services to businesses, governments, and individuals worldwide. MUFG Bank's parent, Mitsubishi UFJ Financial Group, Inc. (MUFG) is one of the world's leading financial groups. Headquartered in Tokyo and with over 360 years of history, the Group has about 120,000 employees and offers services including commercial banking, trust banking, securities, credit cards, consumer finance, asset management, and leasing. 
+
+The Group aims to be the world's most trusted financial group through close collaboration among our operating companies and flexibly respond to all the financial needs of our customers, serving society, and fostering shared and sustainable growth for a better world. MUFG's shares trade on the Tokyo, Nagoya, and New York stock exchanges. 
+
+For more information, visit https://www.mufg.jp/english
+
+
+MUFG Global Service Private Limited
+
+Established in 2020, MUFG Global Service Private Limited (MGS) is 100% subsidiary of MUFG having offices in Bengaluru and Mumbai. MGS India has been set up as a Global Capability Centre / Centre of Excellence to provide support services across various functions such as IT, KYC/ AML, Credit, Operations etc. to MUFG Bank offices globally. MGS India has plans to significantly ramp-up its growth over the next 18-24 months while servicing MUFG's global network across Americas, EMEA and Asia Pacific
+
+
+About the Role 	
+Position Tile: Cyber Security Intern
+Title: Intern
+Reporting to: CISO
+Location: Bengaluru
+
+ 			
+
+
+
+
+
+
+
+
+
+
+Job Profile
+
+Purpose of the Job 
+The Cyber Security Staff is responsible for protecting the organization's digital assets, minimizing security threats, and ensuring the confidentiality, integrity, and availability of data. They will work closely with the IT and Development teams to identify vulnerabilities, implement security measures, and create and implement security procedures and guidelines. They will also be responsible for staying up to date with the latest security trends and technologies and continuously assess and improve the organization's security posture.
+Primary Responsibilities
+
+* Assist in securing systems, networks, endpoints, and cloud environments (Public/Private Cloud Platforms), while gaining hands-on exposure to encryption, identifying security vulnerabilities, supporting vulnerability management, ensuring compliance and applying secure-by-design practices.
+* Involvement in core network security technologies and practices, including:
+o Firewalls, proxies, VPN, Intrusion detection/prevention systems (IPS/IDS).
+o DDoS protection and defense strategies against large-scale attacks.
+o Cloud security and access controls (CASB), email and web security gateways, authentication measures (MFA), and endpoint/rogue device protection.
+o Commonly used network security tools and platforms such as Cisco, Palo Alto, Zscalar.
+* Gain hand-on exposure to Identity & Access Management (IAM) concepts, including:
+o Privileged Access Management (PAM), Directory services (Azure AD, Active Directory, user and application onboarding/offboarding, and common identity integration standards and protocols, such as SAML, OAuth, OpenID Connect, and SCIM.
+* Exposure to cybersecurity tools and their lifecycle management, including installation, configuration, and maintenance tasks. 
+* Gain Knowledge and Hands-on experience with SIEM and SOAR tools for use case development, security monitoring, Incident response, and administration.
+* Collaborate with the development team to integrate security measures into the Software Development Life Cycle (SDLC).
+* Develop and implement security policies, procedures, and guidelines to ensure a robust security posture across the organization.
+* Ability to Identify and promptly respond to security incidents, perform root cause analysis and assist in implementing mitigation measures.
+* Develop, maintain and execute security playbooks, runbooks, scenario-based guidelines for effective incident response.
+* Stay up to date with the latest security trends, technologies, and emerging threats to continuously enhance security postures.
+* Apply knowledge of threat management, threat intelligence, and threat hunting to proactively identify and mitigate security risks.
+* Skill is scripting, automation, and coding for security management, with familiarity in leveraging AI and Machine learning for Cybersecurity considered an added advantage.
+
+
+
+Candidate Profile:
+* Students currently pursuing B. Tech/B. E in Cyber Security / Computer Science or a related discipline. 
+* Cyber Security related certifications (if any) will be an added advantage.
+* Cyber security projects or other relative experience in information and Cyber Security
+* Exposure to Automation, scripting (Python, PowerShell, bash etc.), or security related projects as part of academic curriculum is a plus.
+* Actively participated in Cybersecurity completions, hackathons, and relevant industry events, with a track record on winning or earning a recognition.  
+
+Education & Professional Qualifications:
+Personal Skills: 
+* Excellent problem-solving skills.
+* Strong analytical and critical thinking abilities.
+* Effective communication skills for collaborating with team members and stakeholders.
+
+Technical Skills:
+* Basic knowledge of cybersecurity principles and practices.
+* Familiarity with operating systems, including Windows and Linux.
+* Understanding of the software development life cycle (SDLC) and its security implications.
+* Knowledge of security fundamentals, including cryptography, authentication, and authorization.
+* Familiarity with vulnerability testing and assessment tools.
+* Understanding of cybersecurity tools, such as SIEM, IDS/IPS, antivirus, and intrusion detection systems.
+* Familiarity with creating runbooks, playbooks, security guidelines, and procedures.
+* Exposure to network security tools such as firewalls, routers, WAF, proxy, DDoS, and IAM systems.
+* Previous experience as a cyber security intern is a plus.
+
+Although previous experience in a cybersecurity security is preferred, this position is open to final year students or individuals with relevant internships or certifications. A strong understanding of cybersecurity principles and technologies is essential. The candidate should be willing to learn and continuously improve their skills and knowledge in the field of cybersecurity.
+
+Equal Opportunity Employer
+
+The MUFG Group is committed to providing equal employment opportunities to all applicants and employees and does not discriminate on the basis of race, colour, national origin, physical appearance, religion, gender expression, gender identity, sex, age, ancestry, marital status, disability, medical condition, sexual orientation, genetic information, or any other protected status of an individual or that individual's associates or relatives, or any other classification protected by the applicable law
+
+
