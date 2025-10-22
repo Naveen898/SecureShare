@@ -1,5 +1,17 @@
 services:
   backend:
+  # ...existing code...
+  services:
+    backend:
+      # ...existing code...
+      command: >
+        gunicorn
+        -k uvicorn.workers.UvicornWorker
+        -w 2
+        -b 0.0.0.0:8000
+        main:app
+    # If your FastAPI app is at /app/app/main.py, use: app.main:app
+# ...existing code...
     depends_on: []
     environment:
       DATABASE_URL: ${DATABASE_URL}
