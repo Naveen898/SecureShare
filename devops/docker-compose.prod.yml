@@ -1,29 +1,23 @@
 services:
+  backend:
     depends_on: []
+    env_file:
+      - ./devops/.env
     environment:
       DATABASE_URL: ${DATABASE_URL}
-      STORAGE_BACKEND: ${STORAGE_BACKEND:-s3}
+      DB_SSL_REQUIRE: "${DB_SSL_REQUIRE:-1}"
+      STORAGE_BACKEND: "${STORAGE_BACKEND:-s3}"
       AWS_REGION: ${AWS_REGION}
       AWS_S3_BUCKET: ${AWS_S3_BUCKET}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       FRONTEND_BASE_URL: ${FRONTEND_BASE_URL}
-      HCAPTCHA_ENABLED: ${HCAPTCHA_ENABLED:-0}
-      MFA_ADMIN_ENABLED: ${MFA_ADMIN_ENABLED:-1}
-      NOTIFY_ON_DOWNLOAD: ${NOTIFY_ON_DOWNLOAD:-1}
-      NOTIFY_OWNER_ON_TRANSFER: ${NOTIFY_OWNER_ON_TRANSFER:-1}
+      HCAPTCHA_ENABLED: "${HCAPTCHA_ENABLED:-0}"
+      MFA_ADMIN_ENABLED: "${MFA_ADMIN_ENABLED:-1}"
+      NOTIFY_ON_DOWNLOAD: "${NOTIFY_ON_DOWNLOAD:-1}"
+      NOTIFY_OWNER_ON_TRANSFER: "${NOTIFY_OWNER_ON_TRANSFER:-1}"
       JWT_SECRET: ${JWT_SECRET}
+    command: ["gunicorn","-k","uvicorn.workers.UvicornWorker","-w","2","-b","0.0.0.0:8000","app.main:app"]
   frontend:
     environment:
       - API_BASE=${API_BASE:-http://localhost}
-  backend:
-    # do not prefix these keys with '-'
-    env_file:
-      - ./devops/.env
-    environment:
-      DATABASE_URL: ${DATABASE_URL}
-      STORAGE_BACKEND: ${STORAGE_BACKEND}
-      AWS_REGION: ${AWS_REGION}
-      AWS_S3_BUCKET: ${AWS_S3_BUCKET}
-    command: >
-      gunicorn -k uvicorn.workers.UvicornWorker -w 2 -b 0.0.0.0:8000 app.main:app
