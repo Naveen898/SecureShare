@@ -1,48 +1,57 @@
 pipeline {
-    agent any
+  agent any
 
-    parameters {
-        string(name: 'EC2_HOST', defaultValue: 'ec2-1-2-3-4.compute.amazonaws.com', description: 'EC2 public DNS or IP')
-        string(name: 'BRANCH', defaultValue: 'main', description: 'Git branch to deploy')
-        string(name: 'REMOTE_PATH', defaultValue: '/opt/secureshare', description: 'Path on EC2 where repo lives')
+  parameters {
+    string(name: 'EC2_HOST', defaultValue: '13.203.215.122', description: 'Target EC2 public IP/DNS')
+  }
+
+  stages {
+    stage('Checkout') {
+      steps {
+        checkout scm
+      }
     }
 
-    stages {
-        stage('Checkout') {
-            steps { checkout scm }
+    stage('Deploy via SSH (Compose)') {
+      steps {
+        sshagent(credentials: ['ec2-ssh-key']) {
+          sh '''
+            set -e
+            ssh -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} '
+              set -e
+              if [ ! -d /opt/secureshare ]; then sudo mkdir -p /opt/secureshare; sudo chown ec2-user:ec2-user /opt/secureshare; fi
+              cd /opt/secureshare
+
+              if [ ! -d .git ]; then
+                git init
+                git remote add origin https://github.com/Naveen898/SecureShare.git
+              fi
+              git fetch --all
+              git reset --hard origin/main
+
+              # Make compose read env at parse-time and pass to containers
+              if [ -f /opt/secureshare/.env ]; then
+                ln -sf /opt/secureshare/.env /opt/secureshare/devops/.env
+              else
+                echo "Missing /opt/secureshare/.env on EC2"; exit 1
+              fi
+
+              # Compose deploy
+              sudo docker-compose -f devops/docker-compose.yml -f devops/docker-compose.prod.yml up -d --build backend frontend
+
+              # DB migrations
+              sudo docker-compose -f devops/docker-compose.yml -f devops/docker-compose.prod.yml exec -e PYTHONPATH=. backend bash -lc "cd /app && alembic upgrade head"
+
+              # Health check
+              curl -sf http://localhost/api/health > /dev/null
+            '
+          '''
         }
-
-        stage('Deploy via SSH (Compose)') {
-            steps {
-                sshagent(credentials: ['ec2-ssh-key']) {
-                    sh '''
-                    set -e
-                    ssh -o StrictHostKeyChecking=no ec2-user@${EC2_HOST} "\
-                        set -e; \
-                        if [ ! -d ${REMOTE_PATH} ]; then sudo mkdir -p ${REMOTE_PATH}; sudo chown ec2-user:ec2-user ${REMOTE_PATH}; fi; \
-                        cd ${REMOTE_PATH}; \
-                        # If no git repo, initialize one. Otherwise, just fetch.
-                        if [ ! -d .git ]; then
-                            git init;
-                            git remote add origin https://github.com/Naveen898/SecureShare.git;
-                        fi; \
-                        git fetch --all; \
-                        # Reset the branch to match GitHub exactly, discarding any local changes.
-                        git reset --hard origin/${BRANCH}; \
-                        # Now, deploy the application.
-                        sudo docker-compose -f devops/docker-compose.yml -f devops/docker-compose.prod.yml up -d --build backend frontend; \
-                        sudo docker-compose -f devops/docker-compose.yml -f devops/docker-compose.prod.yml exec -e PYTHONPATH=. backend alembic upgrade head; \
-                        # Verify the health check.
-                        curl -sf http://localhost/api/health > /dev/null || exit 1 \
-                    "
-                    '''
-                }
-            }
-        }
+      }
     }
+  }
 
-    post {
-        success { echo 'Deployment completed successfully.' }
-        failure { echo 'Deployment failed.' }
-    }
+  post {
+    failure { echo 'Deployment failed.' }
+  }
 }
