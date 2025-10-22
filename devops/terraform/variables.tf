@@ -1,66 +1,58 @@
-variable "project_name" {
-  description = "The name of the project"
+// filepath: devops/terraform/variables.tf
+variable "aws_region" {
+  description = "The AWS region to deploy resources in."
   type        = string
-  default     = "VaultUpload"
+  default     = "ap-south-1"
 }
 
-variable "region" {
-  description = "The cloud region for resource deployment"
+variable "vpc_cidr" {
+  description = "CIDR block for the VPC."
   type        = string
+  default     = "10.0.0.0/16"
 }
 
-variable "bucket_name" {
-  description = "The name of the cloud storage bucket"
+variable "public_subnet_cidr" {
+  description = "CIDR block for the public subnet."
   type        = string
+  default     = "10.0.1.0/24"
 }
 
-variable "db_instance_name" {
-  description = "The name of the database instance"
+variable "private_subnet_cidr" {
+  description = "CIDR block for the private subnet."
   type        = string
-}
-
-variable "db_name" {
-  description = "Database name"
-  type        = string
-  default     = "securesharedb"
-}
-
-variable "db_user" {
-  description = "The username for the database"
-  type        = string
-}
-
-variable "db_password" {
-  description = "The password for the database"
-  type        = string
-  sensitive   = true
+  default     = "10.0.2.0/24"
 }
 
 variable "instance_type" {
-  description = "EC2 instance type"
+  description = "EC2 instance type for the servers."
   type        = string
-  default     = "t3.micro"
+  default     = "t2.medium"
 }
 
-variable "db_instance_class" {
-  description = "RDS instance class"
+variable "ami_id" {
+  description = "AMI ID for Amazon Linux 2023. Find the latest in your region."
   type        = string
-  default     = "db.t3.micro"
+  default     = "ami-0f5ee92e2d63afc18" # Example for ap-south-1
 }
 
-variable "key_name" {
-  description = "EC2 Key Pair name for SSH"
-  type        = string
-}
-
-variable "jwt_secret" {
-  description = "Secret key for JWT token generation"
+variable "db_username" {
+  description = "Username for the RDS database."
   type        = string
   sensitive   = true
 }
 
-variable "expiry_duration" {
-  description = "Duration for file expiry in hours"
-  type        = number
-  default     = 24
+variable "db_password" {
+  description = "Password for the RDS database."
+  type        = string
+  sensitive   = true
+}
+
+variable "s3_bucket_name" {
+  description = "The name for the S3 file storage bucket."
+  type        = string
+}
+
+variable "key_name" {
+  description = "Name of the EC2 Key Pair to use for SSH access."
+  type        = string
 }
