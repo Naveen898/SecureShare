@@ -159,6 +159,8 @@ async def upload_file(
             scan_details=scan_result.get('details') if isinstance(scan_result, dict) else None,
         )
         session.add(db_obj)
+        await session.flush()
+
         # Audit log for successful upload
         session.add(FileAccessLog(
             file_id=file_id,
