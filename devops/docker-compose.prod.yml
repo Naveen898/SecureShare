@@ -2,7 +2,7 @@ services:
   backend:
     depends_on: []
     env_file:
-      - ./.env  # Corrected path
+      - ./.env
     environment:
       DATABASE_URL: ${DATABASE_URL}
       DB_SSL_REQUIRE: "${DB_SSL_REQUIRE:-1}"
@@ -17,7 +17,7 @@ services:
       NOTIFY_ON_DOWNLOAD: "${NOTIFY_ON_DOWNLOAD:-1}"
       NOTIFY_OWNER_ON_TRANSFER: "${NOTIFY_OWNER_ON_TRANSFER:-1}"
       JWT_SECRET: ${JWT_SECRET}
-    command: ["gunicorn","-k","uvicorn.workers.UvicornWorker","-w","2","-b","0.0.0.0:8000","app.main:app"]
+    command: ["gunicorn","-k","uvicorn.workers.UvicornWorker","-w","2","-b","0.0.0.0:8000","main:app"]
   frontend:
     environment:
       - API_BASE=${API_BASE:-http://localhost}
