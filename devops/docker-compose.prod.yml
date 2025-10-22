@@ -2,7 +2,7 @@ services:
   backend:
     depends_on: []
     env_file:
-      - ./devops/.env
+      - ./.env  # Corrected path
     environment:
       DATABASE_URL: ${DATABASE_URL}
       DB_SSL_REQUIRE: "${DB_SSL_REQUIRE:-1}"
