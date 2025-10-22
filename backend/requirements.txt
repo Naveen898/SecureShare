@@ -1,5 +1,5 @@
 fastapi==0.112.0
-uvicorn==0.30.3
+uvicorn[standard]>=0.30
 PyJWT==2.9.0
 requests==2.32.3
 python-dotenv==1.0.1
