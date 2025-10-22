@@ -25,8 +25,8 @@ pipeline {
             git fetch --all; \
             git checkout ${BRANCH}; \
             git pull --rebase origin ${BRANCH}; \
-            docker compose -f devops/docker-compose.yml -f devops/docker-compose.prod.yml up -d --build backend frontend; \
-            docker compose -f devops/docker-compose.yml -f devops/docker-compose.prod.yml exec backend bash -lc \"cd /app && alembic upgrade head\"; \
+            sudo docker-compose -f devops/docker-compose.yml -f devops/docker-compose.prod.yml up -d --build backend frontend; \
+            sudo docker-compose -f devops/docker-compose.yml -f devops/docker-compose.prod.yml exec -e PYTHONPATH=. backend alembic upgrade head; \
             curl -sf http://localhost/api/health > /dev/null \
           "
           '''
