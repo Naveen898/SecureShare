@@ -19,5 +19,5 @@ alembic==1.13.2
 # Optional: enable ClamAV Python client (uncomment if you run a clamd daemon)
 # clamd==1.0.2
 httpx==0.27.0
-asyncpg is required for Postgres in production images; optional locally on Windows
+# asyncpg is required for Postgres in production images; optional locally on Windows
 asyncpg==0.29.0
