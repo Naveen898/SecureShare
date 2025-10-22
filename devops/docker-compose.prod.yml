@@ -1,5 +1,4 @@
 services:
-  backend:
     depends_on: []
     environment:
       DATABASE_URL: ${DATABASE_URL}
