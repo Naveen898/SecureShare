@@ -1,179 +1,224 @@
-terraform {
-	required_version = ">= 1.3.0"
-	required_providers {
-		aws = {
-			source  = "hashicorp/aws"
-			version = ">= 5.0"
-		}
-	}
-}
-
 provider "aws" {
-	region = var.region
+  region = var.aws_region
 }
 
-data "aws_caller_identity" "current" {}
-data "aws_region" "current" {}
-data "aws_vpc" "default" { default = true }
-data "aws_subnets" "default" { filter { name = "default-for-az" values = ["true"] } }
-
-# CloudWatch Log Groups
-resource "aws_cloudwatch_log_group" "backend" { name = "/secureshare/backend" retention_in_days = 14 }
-resource "aws_cloudwatch_log_group" "frontend" { name = "/secureshare/frontend" retention_in_days = 14 }
-resource "aws_cloudwatch_log_group" "postgres" { name = "/secureshare/postgres" retention_in_days = 14 }
-
-# ECR repositories
-resource "aws_ecr_repository" "backend" { name = "secureshare-backend" image_tag_mutability = "MUTABLE" }
-resource "aws_ecr_repository" "frontend" { name = "secureshare-frontend" image_tag_mutability = "MUTABLE" }
-
-# IAM Role for EC2 to access S3, ECR, CloudWatch Logs
-resource "aws_iam_role" "ec2_role" {
-	name               = "${var.project_name}-ec2-role"
-	assume_role_policy = jsonencode({
-		Version = "2012-10-17"
-		Statement = [{ Effect = "Allow", Principal = { Service = "ec2.amazonaws.com" }, Action = "sts:AssumeRole" }]
-	})
+# --- Networking ---
+resource "aws_vpc" "main" {
+  cidr_block = var.vpc_cidr
+  tags = {
+    Name = "SecureShare-VPC"
+  }
 }
 
-resource "aws_iam_policy" "ec2_policy" {
-	name   = "${var.project_name}-ec2-policy"
-	policy = jsonencode({
-		Version = "2012-10-17",
-		Statement = [
-			{ Effect = "Allow", Action = ["logs:CreateLogGroup","logs:CreateLogStream","logs:PutLogEvents"], Resource = "*" },
-			{ Effect = "Allow", Action = ["ecr:GetAuthorizationToken","ecr:BatchCheckLayerAvailability","ecr:GetDownloadUrlForLayer","ecr:BatchGetImage"], Resource = "*" },
-			{ Effect = "Allow", Action = ["s3:GetObject","s3:PutObject","s3:ListBucket","s3:DeleteObject"], Resource = ["arn:aws:s3:::${var.bucket_name}","arn:aws:s3:::${var.bucket_name}/*"] }
-		]
-	})
+resource "aws_internet_gateway" "gw" {
+  vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "SecureShare-IGW"
+  }
 }
 
-resource "aws_iam_role_policy_attachment" "attach_policy" {
-	role       = aws_iam_role.ec2_role.name
-	policy_arn = aws_iam_policy.ec2_policy.arn
+resource "aws_subnet" "public" {
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = var.public_subnet_cidr
+  map_public_ip_on_launch = true
+  tags = {
+    Name = "SecureShare-Public-Subnet"
+  }
 }
 
-resource "aws_iam_instance_profile" "ec2_profile" { name = "${var.project_name}-ec2-profile" role = aws_iam_role.ec2_role.name }
-
-# Security Groups
-resource "aws_security_group" "alb_sg" {
-	name        = "${var.project_name}-alb-sg"
-	description = "ALB SG"
-	vpc_id      = data.aws_vpc.default.id
-	ingress { from_port = 80 to_port = 80 protocol = "tcp" cidr_blocks = ["0.0.0.0/0"] }
-	egress { from_port = 0 to_port = 0 protocol = "-1" cidr_blocks = ["0.0.0.0/0"] }
+resource "aws_subnet" "private" {
+  vpc_id     = aws_vpc.main.id
+  cidr_block = var.private_subnet_cidr
+  tags = {
+    Name = "SecureShare-Private-Subnet"
+  }
 }
 
-resource "aws_security_group" "ec2_sg" {
-	name        = "${var.project_name}-ec2-sg"
-	description = "EC2 SG"
-	vpc_id      = data.aws_vpc.default.id
-	ingress { from_port = 80 to_port = 80 protocol = "tcp" security_groups = [aws_security_group.alb_sg.id] }
-	egress { from_port = 0 to_port = 0 protocol = "-1" cidr_blocks = ["0.0.0.0/0"] }
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gw.id
+  }
+  tags = {
+    Name = "SecureShare-Public-RT"
+  }
+}
+
+resource "aws_route_table_association" "public" {
+  subnet_id      = aws_subnet.public.id
+  route_table_id = aws_route_table.public.id
+}
+
+# --- Security Groups ---
+resource "aws_security_group" "jenkins_sg" {
+  name        = "jenkins-sg"
+  description = "Allow SSH and Jenkins UI access"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # WARNING: Open to the world. Restrict to your IP in production.
+  }
+  ingress {
+    from_port   = 8080
+    to_port     = 8080
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_security_group" "app_server_sg" {
+  name        = "app-server-sg"
+  description = "Allow SSH, HTTP, HTTPS"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # WARNING: Open to the world.
+  }
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
 resource "aws_security_group" "rds_sg" {
-	name        = "${var.project_name}-rds-sg"
-	description = "RDS SG"
-	vpc_id      = data.aws_vpc.default.id
-	ingress { from_port = 5432 to_port = 5432 protocol = "tcp" security_groups = [aws_security_group.ec2_sg.id] }
-	egress { from_port = 0 to_port = 0 protocol = "-1" cidr_blocks = ["0.0.0.0/0"] }
+  name        = "rds-sg"
+  description = "Allow PostgreSQL access from app server"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 5432
+    to_port         = 5432
+    protocol        = "tcp"
+    security_groups = [aws_security_group.app_server_sg.id]
+  }
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
 }
 
-# RDS Postgres (dev-sized)
-resource "aws_db_subnet_group" "default" {
-	name       = "${var.project_name}-db-subnets"
-	subnet_ids = data.aws_subnets.default.ids
+# --- IAM Role for S3 Access ---
+resource "aws_iam_role" "s3_access_role" {
+  name = "SecureShareS3AccessRole"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = "sts:AssumeRole",
+      Effect = "Allow",
+      Principal = {
+        Service = "ec2.amazonaws.com"
+      }
+    }]
+  })
 }
 
-resource "aws_db_instance" "postgres" {
-	identifier              = "${var.project_name}-db"
-	engine                  = "postgres"
-	engine_version          = "16"
-	instance_class          = var.db_instance_class
-	username                = var.db_user
-	password                = var.db_password
-	allocated_storage       = 20
-	db_subnet_group_name    = aws_db_subnet_group.default.name
-	vpc_security_group_ids  = [aws_security_group.rds_sg.id]
-	skip_final_snapshot     = true
-	publicly_accessible     = false
+resource "aws_iam_policy" "s3_access_policy" {
+  name        = "SecureShareS3Policy"
+  description = "Allows read/write access to a specific S3 bucket"
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [{
+      Action = [
+        "s3:GetObject",
+        "s3:PutObject",
+        "s3:DeleteObject",
+        "s3:ListBucket"
+      ],
+      Effect   = "Allow",
+      Resource = [
+        "arn:aws:s3:::${var.s3_bucket_name}",
+        "arn:aws:s3:::${var.s3_bucket_name}/*"
+      ]
+    }]
+  })
 }
 
-# ALB
-resource "aws_lb" "app" {
-	name               = "${var.project_name}-alb"
-	load_balancer_type = "application"
-	security_groups    = [aws_security_group.alb_sg.id]
-	subnets            = data.aws_subnets.default.ids
+resource "aws_iam_role_policy_attachment" "s3_policy_attach" {
+  role       = aws_iam_role.s3_access_role.name
+  policy_arn = aws_iam_policy.s3_access_policy.arn
 }
 
-resource "aws_lb_target_group" "app_tg" {
-	name        = "${var.project_name}-tg"
-	port        = 80
-	protocol    = "HTTP"
-	vpc_id      = data.aws_vpc.default.id
-	target_type = "instance"
-	health_check { path = "/" matcher = "200-399" }
+resource "aws_iam_instance_profile" "app_server_profile" {
+  name = "SecureShareAppServerProfile"
+  role = aws_iam_role.s3_access_role.name
 }
 
-resource "aws_lb_listener" "http" {
-	load_balancer_arn = aws_lb.app.arn
-	port              = 80
-	protocol          = "HTTP"
-	default_action { type = "forward" target_group_arn = aws_lb_target_group.app_tg.arn }
+# --- EC2 Instances ---
+resource "aws_instance" "jenkins_controller" {
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.jenkins_sg.id]
+  key_name               = var.key_name
+  tags = {
+    Name = "Jenkins-Controller"
+  }
 }
 
-# EC2 instance
-data "aws_ami" "amazon_linux" {
-	most_recent = true
-	owners      = ["137112412989"] # Amazon Linux 2/2023
-	filter { name = "name" values = ["al2023-ami-*-x86_64"] }
+resource "aws_instance" "app_server" {
+  ami                    = var.ami_id
+  instance_type          = var.instance_type
+  subnet_id              = aws_subnet.public.id
+  vpc_security_group_ids = [aws_security_group.app_server_sg.id]
+  key_name               = var.key_name
+  iam_instance_profile   = aws_iam_instance_profile.app_server_profile.name
+  tags = {
+    Name = "SecureShare-App-Server"
+  }
 }
 
-resource "aws_instance" "app" {
-	ami                         = data.aws_ami.amazon_linux.id
-	instance_type               = var.instance_type
-	subnet_id                   = data.aws_subnets.default.ids[0]
-	vpc_security_group_ids      = [aws_security_group.ec2_sg.id]
-	iam_instance_profile        = aws_iam_instance_profile.ec2_profile.name
-	associate_public_ip_address = true
-	key_name                    = var.key_name
-
-	user_data = <<-EOT
-#!/bin/bash
-set -e
-dnf update -y
-dnf install -y docker git
-systemctl enable docker
-systemctl start docker
-curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-chmod +x /usr/local/bin/docker-compose
-aws ecr get-login-password --region ${data.aws_region.current.name} | docker login --username AWS --password-stdin ${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com
-cat >/opt/docker-compose.yml <<'YML'
-version: '3.9'
-services:
-	backend:
-		image: ${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/secureshare-backend:latest
-		environment:
-			DATABASE_URL: postgresql+asyncpg://${var.db_user}:${var.db_password}@${aws_db_instance.postgres.address}:5432/${var.db_name}
-			AWS_REGION: ${data.aws_region.current.name}
-			AWS_S3_BUCKET: ${var.bucket_name}
-			FRONTEND_BASE_URL: http://localhost
-			JWT_SECRET: ${var.jwt_secret}
-		expose: ["8000"]
-	frontend:
-		image: ${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com/secureshare-frontend:latest
-		ports: ["80:80"]
-		depends_on: [backend]
-YML
-docker-compose -f /opt/docker-compose.yml up -d
-EOT
-
-	tags = { Name = "${var.project_name}-ec2" }
+# --- RDS Database ---
+resource "aws_db_subnet_group" "db_subnet_group" {
+  name       = "secureshare-db-subnet-group"
+  subnet_ids = [aws_subnet.private.id]
+  tags = {
+    Name = "SecureShare DB Subnet Group"
+  }
 }
 
-resource "aws_lb_target_group_attachment" "attach" {
-	target_group_arn = aws_lb_target_group.app_tg.arn
-	target_id        = aws_instance.app.id
-	port             = 80
+resource "aws_db_instance" "main" {
+  allocated_storage    = 20
+  engine               = "postgres"
+  engine_version       = "15.3"
+  instance_class       = "db.t3.micro"
+  db_name              = "securesharedb"
+  username             = var.db_username
+  password             = var.db_password
+  db_subnet_group_name = aws_db_subnet_group.db_subnet_group.name
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+  skip_final_snapshot  = true
+}
+
+# --- S3 Bucket ---
+resource "aws_s3_bucket" "storage" {
+  bucket = var.s3_bucket_name
 }
