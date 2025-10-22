@@ -1,51 +1,92 @@
-- hosts: all
+---
+- name: Configure Jenkins Controller
+  hosts: jenkins_servers
   become: yes
   tasks:
-    - name: Install required packages
-      apt:
-        name:
-          - python3
-          - python3-pip
-          - docker.io
-          - docker-compose
+    - name: Update all packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+
+    - name: Install Java (Amazon Corretto 17)
+      ansible.builtin.dnf:
+        name: java-17-amazon-corretto-devel
         state: present
 
-    - name: Clone the VaultUpload repository
-      git:
-        repo: 'https://github.com/yourusername/VaultUpload.git'
-        dest: /opt/VaultUpload
-        version: main
+    - name: Add Jenkins repo
+      ansible.builtin.get_url:
+        url: https://pkg.jenkins.io/redhat-stable/jenkins.repo
+        dest: /etc/yum.repos.d/jenkins.repo
+        mode: '0644'
 
-    - name: Install Python dependencies
-      pip:
-        requirements: /opt/VaultUpload/backend/requirements.txt
+    - name: Import Jenkins GPG key
+      ansible.builtin.rpm_key:
+        state: present
+        key: https://pkg.jenkins.io/redhat-stable/jenkins.io-2023.key
 
-    - name: Start Docker containers
-      command: docker compose -f devops/docker-compose.yml up -d --build
-      args:
-        chdir: /opt/VaultUpload
+    - name: Install Jenkins
+      ansible.builtin.dnf:
+        name: jenkins
+        state: present
 
-    - name: Ensure services are running
-      command: docker ps
-      register: docker_ps
+    - name: Start and enable Jenkins service
+      ansible.builtin.service:
+        name: jenkins
+        state: started
+        enabled: yes
 
-    - debug:
-        var: docker_ps.stdout_lines
+    - name: Install Git and Docker
+      ansible.builtin.dnf:
+        name:
+          - git
+          - docker
+        state: present
 
-    - name: Clean up old containers
-      command: docker system prune -f
+    - name: Start and enable Docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
 
-    - name: Check health of backend service
-      uri:
-        url: http://localhost/api/health/health
-        method: GET
-        return_content: yes
-      register: health_check
+    - name: Add ec2-user to the docker group
+      ansible.builtin.user:
+        name: ec2-user
+        groups: docker
+        append: yes
 
-    - debug:
-        var: health_check.content
+- name: Configure SecureShare App Server
+  hosts: app_servers
+  become: yes
+  tasks:
+    - name: Update all packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
 
-    - name: Notify if backend service is not healthy
-      fail:
-        msg: "Backend service is not healthy!"
-      when: health_check.status != 200
+    - name: Install Git, Docker, and Docker Compose Plugin
+      ansible.builtin.dnf:
+        name:
+          - git
+          - docker
+          - docker-compose-plugin
+        state: present
+
+    - name: Start and enable Docker service
+      ansible.builtin.service:
+        name: docker
+        state: started
+        enabled: yes
+
+    - name: Add ec2-user to the docker group
+      ansible.builtin.user:
+        name: ec2-user
+        groups: docker
+        append: yes
+
+    - name: Create application directory /opt/secureshare
+      ansible.builtin.file:
+        path: /opt/secureshare
+        state: directory
+        owner: ec2-user
+        group: ec2-user
+        mode: '0755'
