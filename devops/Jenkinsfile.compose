@@ -43,7 +43,7 @@ pipeline {
               sudo docker-compose -f devops/docker-compose.yml -f devops/docker-compose.prod.yml exec -e PYTHONPATH=. backend bash -lc "cd /app && alembic upgrade head"
 
               # Health check
-              curl -sf http://localhost/api/health > /dev/null
+              curl -sf http://localhost/api/health/ > /dev/null
             '
           '''
         }
