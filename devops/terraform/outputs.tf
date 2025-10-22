@@ -1,13 +1,20 @@
-output "backend_service_url" {
-  value = "http://${backend_service_name}.${namespace}.svc.cluster.local:${backend_service_port}"
+// filepath: devops/terraform/outputs.tf
+output "jenkins_public_ip" {
+  description = "Public IP address of the Jenkins Controller instance."
+  value       = aws_instance.jenkins_controller.public_ip
 }
 
-output "frontend_service_url" {
-  value = "http://${frontend_service_name}.${namespace}.svc.cluster.local:${frontend_service_port}"
+output "app_server_public_ip" {
+  description = "Public IP address of the SecureShare App Server instance."
+  value       = aws_instance.app_server.public_ip
 }
 
-// Deprecated: No outputs; previous GCP outputs removed.
+output "rds_endpoint" {
+  description = "The endpoint of the RDS instance."
+  value       = aws_db_instance.main.endpoint
+}
 
-output "jwt_secret" {
-  value = "${var.jwt_secret}"
+output "s3_bucket_name" {
+  description = "The name of the S3 bucket for file storage."
+  value       = aws_s3_bucket.storage.id
 }
