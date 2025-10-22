@@ -22,11 +22,11 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(upload_router, prefix="/api/uploads", tags=["uploads"])
-app.include_router(auth_router, prefix="/api/auth", tags=["auth"])
-app.include_router(health_router, prefix="/api/health", tags=["health"])
-app.include_router(misc_router, prefix="/api/misc", tags=["misc"])
-app.include_router(user_router, prefix="/api/admin", tags=["admin"])
+app.include_router(upload_router, prefix="/uploads", tags=["uploads"])
+app.include_router(auth_router, prefix="/auth", tags=["auth"])
+app.include_router(health_router, prefix="/health", tags=["health"])
+app.include_router(misc_router, prefix="/misc", tags=["misc"])
+app.include_router(user_router, prefix="/admin", tags=["admin"])
 
 @app.get("/")
 def read_root():
