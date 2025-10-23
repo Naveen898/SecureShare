@@ -19,5 +19,6 @@ services:
       JWT_SECRET: ${JWT_SECRET}
     command: ["gunicorn","-k","uvicorn.workers.UvicornWorker","-w","2","-b","0.0.0.0:8000","main:app"]
   frontend:
+    restart: unless-stopped
     environment:
       - API_BASE=${API_BASE:-http://localhost}
